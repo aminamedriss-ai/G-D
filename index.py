@@ -12,6 +12,8 @@ st.set_page_config(
     layout="wide"
 )
 import base64
+import os
+os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
 
 # Fonction pour convertir une image locale en base64
 def get_base64_of_image(img_path):
@@ -304,6 +306,7 @@ if matricule:
                         st.info("ℹ️ Ce mois, vous êtes payé uniquement avec le **salaire net**. Les indemnités seront versées à la fin du trimestre.")
                 else:
                     st.error("Aucune donnée trouvée pour ce mois.")
+
 
 
 
