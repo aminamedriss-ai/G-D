@@ -258,10 +258,10 @@ if matricule:
                 df_mois = df_all[df_all["Mois"] == mois_choisi]
 
                 if not df_mois.empty:
-                    salaire_net = df_mois["Salaire net"].iloc[0]
-                    travel_expense = df_mois["Travel Expense"].iloc[0]
-                    travel_allowance = df_mois["Travel Allowance"].iloc[0]
-                    total_mois = df_mois["Total"].iloc[0]
+                    salaire_net = float(df_mois["Salaire net"].iloc[0])
+                    travel_expense = float(df_mois["Travel Expense"].iloc[0])
+                    travel_allowance = float(df_mois["Travel Allowance"].iloc[0])
+                    total_mois = float(df_mois["Total"].iloc[0])
 
                     # Définir les trimestres
                     trimestre = {
@@ -303,6 +303,7 @@ if matricule:
                         st.info("ℹ️ Ce mois, vous êtes payé uniquement avec le **salaire net**. Les indemnités seront versées à la fin du trimestre.")
                 else:
                     st.error("Aucune donnée trouvée pour ce mois.")
+
 
 
 
