@@ -233,8 +233,8 @@ if matricule:
     ]
 
     # 🔹 Récupérer les mois disponibles
-    res = supabase.table("fusion_table").select("mois").eq("matricule", matricule).execute()
-    mois_dispo = list({r["mois"] for r in res.data})
+    res = supabase.table("Paie").select("Mois").eq("N°", matricule).execute()
+    mois_dispo = list({r["Mois"] for r in res.data})
     mois_dispo = sorted(mois_dispo, key=lambda x: ordre_mois.index(x) if x in ordre_mois else 999)
 
     if mois_dispo:
@@ -247,22 +247,22 @@ if matricule:
 
         if mois_choisi:
             # 🔹 Charger toutes les lignes de cet employé
-            res_all = supabase.table("fusion_table").select("*").eq("matricule", matricule).execute()
+            res_all = supabase.table("Paie").select("*").eq("N°", matricule).execute()
             df_all = pd.DataFrame(res_all.data)
 
             if not df_all.empty:
                 # Catégoriser les mois
-                df_all["mois"] = pd.Categorical(df_all["mois"], categories=ordre_mois, ordered=True)
-                df_all = df_all.sort_values("mois")
+                df_all["Mois"] = pd.Categorical(df_all["Mois"], categories=ordre_mois, ordered=True)
+                df_all = df_all.sort_values("Mois")
 
                 # Ligne du mois choisi
-                df_mois = df_all[df_all["mois"] == mois_choisi]
+                df_mois = df_all[df_all["Mois"] == mois_choisi]
 
                 if not df_mois.empty:
-                    salaire_net = df_mois["salaire_net"].iloc[0]
-                    travel_expense = df_mois["travel_expense"].iloc[0]
-                    travel_allowance = df_mois["travel_allowance"].iloc[0]
-                    total_mois = df_mois["total"].iloc[0]
+                    salaire_net = df_mois["Salaire net"].iloc[0]
+                    travel_expense = df_mois["Travel Expense"].iloc[0]
+                    travel_allowance = df_mois["Travel Allowance"].iloc[0]
+                    total_mois = df_mois["Total"].iloc[0]
 
                     # Définir les trimestres
                     trimestre = {
@@ -276,7 +276,7 @@ if matricule:
                     salaire_affiche = salaire_net
 
                     # --- Affichage ---
-                    st.success(f"Bienvenue {df_mois['name'].iloc[0]} 👋")
+                    st.success(f"Bienvenue {df_mois['Name'].iloc[0]} 👋")
                     st.write("### 📊 Vos informations de paie")
 
                     # Toujours afficher le salaire net
@@ -291,8 +291,8 @@ if matricule:
 
                     if mois_choisi in trimestre:
                         # Cumul indemnités du trimestre
-                        df_trim = df_all[df_all["mois"].isin(trimestre[mois_choisi])]
-                        cumul_indemnites = df_trim["total"].sum()
+                        df_trim = df_all[df_all["Mois"].isin(trimestre[mois_choisi])]
+                        cumul_indemnites = df_trim["Total"].sum()
                         salaire_affiche = salaire_net + cumul_indemnites
 
                         st.markdown(f"""
@@ -304,5 +304,6 @@ if matricule:
                         st.info("ℹ️ Ce mois, vous êtes payé uniquement avec le **salaire net**. Les indemnités seront versées à la fin du trimestre.")
                 else:
                     st.error("Aucune donnée trouvée pour ce mois.")
+
 
 
