@@ -6,14 +6,15 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 import base64
 from supabase import create_client
+import os
+os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
 st.set_page_config(
     page_title=" Portail Paie Employé G + D",
     page_icon="g+d2.png",  # chemin local ou URL
     layout="wide"
 )
 import base64
-import os
-os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
+
 
 # Fonction pour convertir une image locale en base64
 def get_base64_of_image(img_path):
@@ -306,6 +307,7 @@ if matricule:
                         st.info("ℹ️ Ce mois, vous êtes payé uniquement avec le **salaire net**. Les indemnités seront versées à la fin du trimestre.")
                 else:
                     st.error("Aucune donnée trouvée pour ce mois.")
+
 
 
 
