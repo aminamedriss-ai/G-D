@@ -1,6 +1,3 @@
-#acce avec matricule
-#creer une base de donnée matricule nom prenom segment et allowance 
-#relier le calcule avec la base de donnee 
 import os
 os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
 import streamlit as st
@@ -308,6 +305,7 @@ if matricule:
                         st.info("ℹ️ Ce mois, vous êtes payé uniquement avec le **salaire net**. Les indemnités seront versées à la fin du trimestre.")
                 else:
                     st.error("Aucune donnée trouvée pour ce mois.")
+
 
 
 
