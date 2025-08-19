@@ -7,3 +7,4 @@ xlsxwriter
 rapidfuzz
 supabase 
 sqlalchemy
+pyodbc
