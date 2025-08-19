@@ -1,0 +1,8 @@
+streamlit
+pandas
+numpy
+reportlab
+bcrypt
+xlsxwriter
+rapidfuzz
+supabase 
