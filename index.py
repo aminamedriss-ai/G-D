@@ -232,7 +232,7 @@ if matricule:
     ]
 
     # 🔹 Récupérer les mois disponibles
-    res = supabase.table("Paie").select("Mois").eq('"N°"', matricule).execute()
+    res = supabase.table("Paie").select("Mois").eq('matricule', matricule).execute()
     st.write(res.data)
     mois_dispo = list({r["Mois"] for r in res.data})
     mois_dispo = sorted(mois_dispo, key=lambda x: ordre_mois.index(x) if x in ordre_mois else 999)
@@ -247,7 +247,7 @@ if matricule:
 
         if mois_choisi:
             # 🔹 Charger toutes les lignes de cet employé
-            res_all = supabase.table("Paie").select("*").eq('"N°"', matricule).execute()
+            res_all = supabase.table("Paie").select("*").eq('matricule', matricule).execute()
             df_all = pd.DataFrame(res_all.data)
 
             if not df_all.empty:
@@ -304,6 +304,7 @@ if matricule:
                         st.info("ℹ️ Ce mois, vous êtes payé uniquement avec le **salaire net**. Les indemnités seront versées à la fin du trimestre.")
                 else:
                     st.error("Aucune donnée trouvée pour ce mois.")
+
 
 
 
