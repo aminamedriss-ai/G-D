@@ -233,7 +233,7 @@ if matricule:
     ]
 
     # 🔹 Récupérer les mois disponibles
-    res = supabase.table("Paie").select("Mois").eq("N°", matricule).execute()
+    res = supabase.table("Paie").select("Mois").eq('"N°"', matricule).execute()
     mois_dispo = list({r["Mois"] for r in res.data})
     mois_dispo = sorted(mois_dispo, key=lambda x: ordre_mois.index(x) if x in ordre_mois else 999)
 
@@ -304,6 +304,7 @@ if matricule:
                         st.info("ℹ️ Ce mois, vous êtes payé uniquement avec le **salaire net**. Les indemnités seront versées à la fin du trimestre.")
                 else:
                     st.error("Aucune donnée trouvée pour ce mois.")
+
 
 
 
