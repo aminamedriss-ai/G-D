@@ -224,96 +224,97 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY) # --- LOGIN MATRICULE ---
 # --- LOGIN ---
 matricule = st.text_input("Entrez votre matricule")
 password = st.text_input("Entrez votre mot de passe", type="password")
-
-if matricule and password:
-    # Vérifier matricule + mot de passe
-    res_user = supabase.table("Paie").select("matricule, mdp").eq("matricule", matricule).execute()
-
-    if res_user.data:
-        user = res_user.data[0]
-        if user["mdp"] == password:
-            st.success("✅ Connexion réussie !")
-        
-            # --- TON CODE EXISTANT ---
-            ordre_mois = [
-                "-janv.-", "-févr.-", "-mars-", "-avr.-", "-mai-", "-juin-",
-                "-juil.-", "-août-", "-sept.-", "-oct.-", "-nov.-", "-déc.-"
-            ]  
-            res = supabase.table("Paie").select("Mois").eq('matricule', matricule).execute() 
-            mois_dispo = list({r["Mois"] for r in res.data}) 
-            mois_dispo = sorted(mois_dispo, key=lambda x: ordre_mois.index(x) if x in ordre_mois else 999) 
-
-            if mois_dispo: 
-                mois_choisi = st.selectbox(
-                    "📅 Sélectionnez un mois", 
-                    mois_dispo, 
-                    index=None, 
-                    placeholder="— Sélectionnez un mois —"
-                )
-
-                if mois_choisi:
-                    # 🔹 Charger toutes les lignes de cet employé
-                    res_all = supabase.table("Paie").select("*").eq('matricule', matricule).execute()    
-                    df_all = pd.DataFrame(res_all.data)        
-
-                    if not df_all.empty:
-                        # Catégoriser les mois
-                        df_all["Mois"] = pd.Categorical(df_all["Mois"], categories=ordre_mois, ordered=True)    
-                        df_all = df_all.sort_values("Mois")    
-
-                        # Ligne du mois choisi
-                        df_mois = df_all[df_all["Mois"] == mois_choisi]    
-
-                        if not df_mois.empty:
-                            salaire_net = float(df_mois["Salaire net"].iloc[0])
-                            travel_expense = float(df_mois["Travel Expense"].iloc[0])
-                            travel_allowance = float(df_mois["Travel Allowance"].iloc[0])
-                            total_mois = float(df_mois["Total"].iloc[0])
-
-                            # Définir les trimestres
-                            trimestre = {
-                                "-mars-": ["-janv.-", "-févr.-", "-mars-"],
-                                "-juin-": ["-avr.-", "-mai-", "-juin-"],
-                                "-sept.-": ["-juil.-", "-août-", "-sept.-"],
-                                "-déc.-": ["-oct.-", "-nov.-", "-déc.-"]
-                            }
-
-                            cumul_indemnites = 0
-                            salaire_affiche = salaire_net
-
-                            # --- Affichage ---
-                            st.success(f"Bienvenue {df_mois['Name'].iloc[0]} 👋")
-                            st.write("### 📊 Vos informations de paie")
-
-                            # Toujours afficher le salaire net
-                            st.markdown(f"- **💰 Salaire Net (versé ce mois) :** {salaire_net:,.2f} DZD")
-
-                            # Toujours afficher les indemnités du mois
-                            st.markdown(f"""
-                            - **🧾 Travel Expense :** {travel_expense:,.2f} DZD  
-                            - **🚌 Travel Allowance :** {travel_allowance:,.2f} DZD  
-                            - **📦 Total Indemnités du mois :** {total_mois:,.2f} DZD  
-                            """)
-
-                            if mois_choisi in trimestre:
-                                # Cumul indemnités du trimestre
-                                df_trim = df_all[df_all["Mois"].isin(trimestre[mois_choisi])]
-                                cumul_indemnites = df_trim["Total"].sum()
-                                salaire_affiche = salaire_net + cumul_indemnites
-
+if st.button("Se connecter"):
+    if matricule and password:
+        # Vérifier matricule + mot de passe
+        res_user = supabase.table("Paie").select("matricule, mdp").eq("matricule", matricule).execute()
+    
+        if res_user.data:
+            user = res_user.data[0]
+            if user["mdp"] == password:
+                st.success("✅ Connexion réussie !")
+            
+                # --- TON CODE EXISTANT ---
+                ordre_mois = [
+                    "-janv.-", "-févr.-", "-mars-", "-avr.-", "-mai-", "-juin-",
+                    "-juil.-", "-août-", "-sept.-", "-oct.-", "-nov.-", "-déc.-"
+                ]  
+                res = supabase.table("Paie").select("Mois").eq('matricule', matricule).execute() 
+                mois_dispo = list({r["Mois"] for r in res.data}) 
+                mois_dispo = sorted(mois_dispo, key=lambda x: ordre_mois.index(x) if x in ordre_mois else 999) 
+    
+                if mois_dispo: 
+                    mois_choisi = st.selectbox(
+                        "📅 Sélectionnez un mois", 
+                        mois_dispo, 
+                        index=None, 
+                        placeholder="— Sélectionnez un mois —"
+                    )
+    
+                    if mois_choisi:
+                        # 🔹 Charger toutes les lignes de cet employé
+                        res_all = supabase.table("Paie").select("*").eq('matricule', matricule).execute()    
+                        df_all = pd.DataFrame(res_all.data)        
+    
+                        if not df_all.empty:
+                            # Catégoriser les mois
+                            df_all["Mois"] = pd.Categorical(df_all["Mois"], categories=ordre_mois, ordered=True)    
+                            df_all = df_all.sort_values("Mois")    
+    
+                            # Ligne du mois choisi
+                            df_mois = df_all[df_all["Mois"] == mois_choisi]    
+    
+                            if not df_mois.empty:
+                                salaire_net = float(df_mois["Salaire net"].iloc[0])
+                                travel_expense = float(df_mois["Travel Expense"].iloc[0])
+                                travel_allowance = float(df_mois["Travel Allowance"].iloc[0])
+                                total_mois = float(df_mois["Total"].iloc[0])
+    
+                                # Définir les trimestres
+                                trimestre = {
+                                    "-mars-": ["-janv.-", "-févr.-", "-mars-"],
+                                    "-juin-": ["-avr.-", "-mai-", "-juin-"],
+                                    "-sept.-": ["-juil.-", "-août-", "-sept.-"],
+                                    "-déc.-": ["-oct.-", "-nov.-", "-déc.-"]
+                                }
+    
+                                cumul_indemnites = 0
+                                salaire_affiche = salaire_net
+    
+                                # --- Affichage ---
+                                st.success(f"Bienvenue {df_mois['Name'].iloc[0]} 👋")
+                                st.write("### 📊 Vos informations de paie")
+    
+                                # Toujours afficher le salaire net
+                                st.markdown(f"- **💰 Salaire Net (versé ce mois) :** {salaire_net:,.2f} DZD")
+    
+                                # Toujours afficher les indemnités du mois
                                 st.markdown(f"""
-                                ---
-                                - **➕ Cumul indemnités du trimestre :** {cumul_indemnites:,.2f} DZD  
-                                - **🔢 Salaire final versé :** {salaire_affiche:,.2f} DZD  
+                                - **🧾 Travel Expense :** {travel_expense:,.2f} DZD  
+                                - **🚌 Travel Allowance :** {travel_allowance:,.2f} DZD  
+                                - **📦 Total Indemnités du mois :** {total_mois:,.2f} DZD  
                                 """)
+    
+                                if mois_choisi in trimestre:
+                                    # Cumul indemnités du trimestre
+                                    df_trim = df_all[df_all["Mois"].isin(trimestre[mois_choisi])]
+                                    cumul_indemnites = df_trim["Total"].sum()
+                                    salaire_affiche = salaire_net + cumul_indemnites
+    
+                                    st.markdown(f"""
+                                    ---
+                                    - **➕ Cumul indemnités du trimestre :** {cumul_indemnites:,.2f} DZD  
+                                    - **🔢 Salaire final versé :** {salaire_affiche:,.2f} DZD  
+                                    """)
+                                else:
+                                    st.info("ℹ️ Ce mois, vous êtes payé uniquement avec le **salaire net**. Les indemnités seront versées à la fin du trimestre.")
                             else:
-                                st.info("ℹ️ Ce mois, vous êtes payé uniquement avec le **salaire net**. Les indemnités seront versées à la fin du trimestre.")
-                        else:
-                            st.error("Aucune donnée trouvée pour ce mois.")
-        else:
-            st.error("❌ Mot de passe incorrect")
+                                st.error("Aucune donnée trouvée pour ce mois.")
+            else:
+                st.error("❌ Mot de passe incorrect")
     else:
         st.error("❌ Matricule introuvable")
+
 
 
 
