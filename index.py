@@ -222,19 +222,22 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# --- Initialiser l'état de connexion ---
+# --- Initialiser l'état de session ---
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.matricule = None
+    st.session_state.password_changed = False
+    st.session_state.show_change_form = False
+    st.session_state.show_paie = False
 
-# --- LOGIN ---
+# --- FORMULAIRE DE LOGIN ---
 if not st.session_state.logged_in:
+    st.subheader("🔐 Connexion")
     matricule = st.text_input("Entrez votre matricule")
     password = st.text_input("Entrez votre mot de passe", type="password")
 
     if st.button("Se connecter"):
         if matricule and password:
-            # Vérifier matricule + mot de passe
             res_user = supabase.table("Paie").select("matricule, mdp").eq("matricule", matricule).execute()
 
             if res_user.data:
@@ -243,6 +246,7 @@ if not st.session_state.logged_in:
                     st.session_state.logged_in = True
                     st.session_state.matricule = matricule
                     st.success("✅ Connexion réussie !")
+                    st.rerun()
                 else:
                     st.error("❌ Mot de passe incorrect")
             else:
@@ -252,83 +256,120 @@ if not st.session_state.logged_in:
 
 # --- PAGE APRES CONNEXION ---
 if st.session_state.logged_in:
-    matricule = st.session_state.matricule
+    # st.write(f"👋 Bienvenue, matricule **{st.session_state.matricule}**")
 
-    ordre_mois = [
-        "-janv.-", "-févr.-", "-mars-", "-avr.-", "-mai-", "-juin-",
-        "-juil.-", "-août-", "-sept.-", "-oct.-", "-nov.-", "-déc.-"
-    ]  
-    res = supabase.table("Paie").select("Mois").eq('matricule', matricule).execute() 
-    mois_dispo = list({r["Mois"] for r in res.data}) 
-    mois_dispo = sorted(mois_dispo, key=lambda x: ordre_mois.index(x) if x in ordre_mois else 999) 
+    # --- MENU ---
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔑 Changer mon mot de passe"):
+            st.session_state.show_change_form = True
+            st.session_state.show_paie = False
 
-    if mois_dispo: 
-        mois_choisi = st.selectbox(
-            "📅 Sélectionnez un mois", 
-            mois_dispo, 
-            index=None, 
-            placeholder="— Sélectionnez un mois —"
-        )
+    with col2:
+        if st.button("💼 Consulter ma paie"):
+            st.session_state.show_paie = True
+            st.session_state.show_change_form = False
 
-        if mois_choisi:
-            # 🔹 Charger toutes les lignes de cet employé
-            res_all = supabase.table("Paie").select("*").eq('matricule', matricule).execute()    
-            df_all = pd.DataFrame(res_all.data)        
+    # --- FORMULAIRE CHANGEMENT MOT DE PASSE ---
+    if st.session_state.show_change_form:
+        st.subheader("🔑 Changement du mot de passe")
+        new_password = st.text_input("Nouveau mot de passe", type="password")
+        confirm_password = st.text_input("Confirmez le mot de passe", type="password")
 
-            if not df_all.empty:
-                # Catégoriser les mois
-                df_all["Mois"] = pd.Categorical(df_all["Mois"], categories=ordre_mois, ordered=True)    
-                df_all = df_all.sort_values("Mois")    
+        if st.button("Valider le changement"):
+            if new_password and confirm_password:
+                if new_password == confirm_password:
+                    response = supabase.table("Paie") \
+                        .update({"mdp": new_password}) \
+                        .eq("matricule", st.session_state.matricule) \
+                        .execute()
 
-                # Ligne du mois choisi
-                df_mois = df_all[df_all["Mois"] == mois_choisi]    
+                    if response.data:
+                        st.success("✅ Mot de passe changé avec succès !")
+                        st.session_state.show_change_form = False
+                        st.rerun()
+                    else:
+                        st.error("⚠️ Erreur : aucun enregistrement mis à jour.")
+                else:
+                    st.error("❌ Les mots de passe ne correspondent pas.")
+            else:
+                st.error("❌ Veuillez remplir les deux champs.")
 
-                if not df_mois.empty:
-                    salaire_net = float(df_mois["Salaire net"].iloc[0])
-                    travel_expense = float(df_mois["Travel Expense"].iloc[0])
-                    travel_allowance = float(df_mois["Travel Allowance"].iloc[0])
-                    total_mois = float(df_mois["Total"].iloc[0])
+    # --- INTERFACE CONSULTATION DE PAIE ---
+    if st.session_state.show_paie:
+        st.subheader("📊 Consultation de paie")
+        matricule = st.session_state.matricule
+        ordre_mois = [
+            "-janv.-", "-févr.-", "-mars-", "-avr.-", "-mai-", "-juin-",
+            "-juil.-", "-août-", "-sept.-", "-oct.-", "-nov.-", "-déc.-"
+        ]  
 
-                    # Définir les trimestres
-                    trimestre = {
-                        "-mars-": ["-janv.-", "-févr.-", "-mars-"],
-                        "-juin-": ["-avr.-", "-mai-", "-juin-"],
-                        "-sept.-": ["-juil.-", "-août-", "-sept.-"],
-                        "-déc.-": ["-oct.-", "-nov.-", "-déc.-"]
-                    }
+        res = supabase.table("Paie").select("Mois").eq('matricule', matricule).execute() 
+        mois_dispo = list({r["Mois"] for r in res.data}) 
+        mois_dispo = sorted(mois_dispo, key=lambda x: ordre_mois.index(x) if x in ordre_mois else 999) 
 
-                    cumul_indemnites = 0
-                    salaire_affiche = salaire_net
+        if mois_dispo: 
+            mois_choisi = st.selectbox(
+                "📅 Sélectionnez un mois", 
+                mois_dispo, 
+                index=None, 
+                placeholder="— Sélectionnez un mois —"
+            )
 
-                    # --- Affichage ---
-                    st.success(f"Bienvenue {df_mois['Name'].iloc[0]} 👋")
-                    st.write("### 📊 Vos informations de paie")
+            if mois_choisi:
+                res_all = supabase.table("Paie").select("*").eq('matricule', matricule).execute()    
+                df_all = pd.DataFrame(res_all.data)        
 
-                    st.markdown(f"- **💰 Salaire Net (versé ce mois) :** {salaire_net:,.2f} DZD")
+                if not df_all.empty:
+                    df_all["Mois"] = pd.Categorical(df_all["Mois"], categories=ordre_mois, ordered=True)    
+                    df_all = df_all.sort_values("Mois")    
+                    df_mois = df_all[df_all["Mois"] == mois_choisi]    
 
-                    st.markdown(f"""
-                    - **🧾 Travel Expense :** {travel_expense:,.2f} DZD  
-                    - **🚌 Travel Allowance :** {travel_allowance:,.2f} DZD  
-                    - **📦 Total Indemnités du mois :** {total_mois:,.2f} DZD  
-                    """)
+                    if not df_mois.empty:
+                        salaire_net = float(df_mois["Salaire net"].iloc[0])
+                        travel_expense = float(df_mois["Travel Expense"].iloc[0])
+                        travel_allowance = float(df_mois["Travel Allowance"].iloc[0])
+                        total_mois = float(df_mois["Total"].iloc[0])
 
-                    if mois_choisi in trimestre:
-                        # Cumul indemnités du trimestre
-                        df_trim = df_all[df_all["Mois"].isin(trimestre[mois_choisi])]
-                        cumul_indemnites = df_trim["Total"].sum()
-                        salaire_affiche = salaire_net + cumul_indemnites
+                        trimestre = {
+                            "-mars-": ["-janv.-", "-févr.-", "-mars-"],
+                            "-juin-": ["-avr.-", "-mai-", "-juin-"],
+                            "-sept.-": ["-juil.-", "-août-", "-sept.-"],
+                            "-déc.-": ["-oct.-", "-nov.-", "-déc.-"]
+                        }
+
+                        cumul_indemnites = 0
+                        salaire_affiche = salaire_net
+
+                        st.success(f"Bienvenue {df_mois['Name'].iloc[0]} 👋")
+                        st.write("### 📊 Vos informations de paie")
+
+                        st.markdown(f"- **💰 Salaire Net (versé ce mois) :** {salaire_net:,.2f} DZD")
 
                         st.markdown(f"""
-                        ---
-                        - **➕ Cumul indemnités du trimestre :** {cumul_indemnites:,.2f} DZD  
-                        - **🔢 Salaire final versé :** {salaire_affiche:,.2f} DZD  
+                        - **🧾 Travel Expense :** {travel_expense:,.2f} DZD  
+                        - **🚌 Travel Allowance :** {travel_allowance:,.2f} DZD  
+                        - **📦 Total Indemnités du mois :** {total_mois:,.2f} DZD  
                         """)
-                    else:
-                        st.info("ℹ️ Ce mois, vous êtes payé uniquement avec le **salaire net**. Les indemnités seront versées à la fin du trimestre.")
 
-    # 🔹 Bouton déconnexion
-    if st.button("Se déconnecter"):
+                        if mois_choisi in trimestre:
+                            df_trim = df_all[df_all["Mois"].isin(trimestre[mois_choisi])]
+                            cumul_indemnites = df_trim["Total"].sum()
+                            salaire_affiche = salaire_net + cumul_indemnites
+
+                            st.markdown(f"""
+                            ---
+                            - **➕ Cumul indemnités du trimestre :** {cumul_indemnites:,.2f} DZD  
+                            - **🔢 Salaire final versé :** {salaire_affiche:,.2f} DZD  
+                            """)
+                        else:
+                            st.info("ℹ️ Ce mois, vous êtes payé uniquement avec le **salaire net**. Les indemnités seront versées à la fin du trimestre.")
+
+    # --- BOUTON DECONNEXION ---
+    if st.button("🚪 Se déconnecter"):
         st.session_state.logged_in = False
         st.session_state.matricule = None
+        st.session_state.password_changed = False
+        st.session_state.show_change_form = False
+        st.session_state.show_paie = False
         st.rerun()
-
