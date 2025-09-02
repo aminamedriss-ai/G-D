@@ -220,39 +220,7 @@ st.title("💼 Portail Paie Employé G + D")
 SUPABASE_URL = "https://ddvgplwwukhwdexhwaxc.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkdmdwbHd3dWtod2RleGh3YXhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0MTU4NDIsImV4cCI6MjA3MDk5MTg0Mn0.z8qKY6xGTwb4Ixd6V9GAHDWc6atFkkpdLGHuGGDh-4g"
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-# --- LOGIN MATRICULE ---
-matricule = st.text_input("Entrez votre matricule")
-password = st.text_input("Entrez votre mot de passe", type="password")
-
-if st.button("Se connecter"):
-    if matricule and password:
-        # Vérifier matricule + mot de passe dans la table
-        res = supabase.table("Paie").select("matricule, MDP").eq("matricule", matricule).execute()
-
-        if res.data:
-            user = res.data[0]
-            if user["MDP"] == password:
-                st.success("✅ Connexion réussie !")
-
-                # 🔹 Charger les mois disponibles
-                ordre_mois = [
-                    "-janv.-", "-févr.-", "-mars-", "-avr.-", "-mai-", "-juin-",
-                    "-juil.-", "-août-", "-sept.-", "-oct.-", "-nov.-", "-déc.-"
-                ]
-                res_mois = supabase.table("Paie").select("Mois").eq("matricule", matricule).execute()
-                mois_dispo = list({r["Mois"] for r in res_mois.data})
-                mois_dispo = sorted(mois_dispo, key=lambda x: ordre_mois.index(x) if x in ordre_mois else 999)
-
-                if mois_dispo:
-                    mois_choisi = st.selectbox(
-                        "📅 Sélectionnez un mois",
-                        mois_dispo,
-                        index=None,
-                        placeholder="— Sélectionnez un mois —"
-                    )
-
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY) # --- LOGIN MATRICULE --- matricule = st.text_input("Entrez votre matricule") if matricule: ordre_mois = [ "-janv.-", "-févr.-", "-mars-", "-avr.-", "-mai-", "-juin-", "-juil.-", "-août-", "-sept.-", "-oct.-", "-nov.-", "-déc.-" ] # 🔹 Récupérer les mois disponibles res = supabase.table("Paie").select("Mois").eq('matricule', matricule).execute() mois_dispo = list({r["Mois"] for r in res.data}) mois_dispo = sorted(mois_dispo, key=lambda x: ordre_mois.index(x) if x in ordre_mois else 999) if mois_dispo: mois_choisi = st.selectbox( "📅 Sélectionnez un mois", mois_dispo, index=None, placeholder="— Sélectionnez un mois —" )
                     if mois_choisi:
                         # 🔹 Charger toutes les lignes de cet employé
                         res_all = supabase.table("Paie").select("*").eq('matricule', matricule).execute()
