@@ -208,7 +208,39 @@ header[data-testid="stHeader"] button[kind="header"] {
 """, unsafe_allow_html=True)
 
 
+def to_bool(x):
+    if pd.isna(x):
+        return False
+    if isinstance(x, bool):
+        return x
+    if isinstance(x, (int, float)):
+        return bool(int(x))
+    s = str(x).strip().lower()
+    if s in {"true","t","1","yes","y","vrai","oui"}:
+        return True
+    if s in {"false","f","0","no","n","faux","non"}:
+        return False
+    return False
 
+def parse_number(x):
+    """Parse les nombres robustement (gère '45 167,01', '45167.01', '12,34'...)."""
+    if pd.isna(x):
+        return 0.0
+    s = str(x).strip()
+    if s == "":
+        return 0.0
+    s = s.replace(" ", "")  # supprime les espaces milliers
+    # Si les deux séparateurs existent, on suppose que '.' = milliers et ',' = décimal
+    if '.' in s and ',' in s:
+        s = s.replace('.', '').replace(',', '.')
+    else:
+        # si seul ',' -> décimal
+        if ',' in s and '.' not in s:
+            s = s.replace(',', '.')
+    try:
+        return float(s)
+    except:
+        return 0.0
 
 with open("g+d.png", "rb") as image_file:
     encoded = base64.b64encode(image_file.read()).decode()
@@ -308,62 +340,76 @@ if st.session_state.logged_in:
         mois_dispo = list({r["Mois"] for r in res.data}) 
         mois_dispo = sorted(mois_dispo, key=lambda x: ordre_mois.index(x) if x in ordre_mois else 999) 
 
-        if mois_dispo: 
+        if mois_dispo:
             mois_choisi = st.selectbox(
-                "📅 Sélectionnez un mois", 
-                mois_dispo, 
-                index=None, 
+                "📅 Sélectionnez un mois",
+                mois_dispo,
+                index=None,
                 placeholder="— Sélectionnez un mois —"
             )
 
             if mois_choisi:
-                res_all = supabase.table("Paie").select("*").eq('matricule', matricule).execute()    
-                df_all = pd.DataFrame(res_all.data)        
+                res_all = supabase.table("Paie").select("*").eq('matricule', matricule).execute()
+                df_all = pd.DataFrame(res_all.data)
 
                 if not df_all.empty:
-                    df_all["Mois"] = pd.Categorical(df_all["Mois"], categories=ordre_mois, ordered=True)    
-                    df_all = df_all.sort_values("Mois")    
-                    df_mois = df_all[df_all["Mois"] == mois_choisi]    
+                    # normaliser la colonne Mois et trier
+                    df_all["Mois"] = pd.Categorical(df_all["Mois"], categories=ordre_mois, ordered=True)
+                    df_all = df_all.sort_values("Mois").reset_index(drop=True)
 
+                    # Normaliser les colonnes numériques et ispaye
+                    for col in ["Salaire net", "Travel Expense", "Allowance", "Total"]:
+                        if col in df_all.columns:
+                            df_all[col] = df_all[col].apply(parse_number)
+
+                    if "ispaye" in df_all.columns:
+                        df_all["ispaye_bool"] = df_all["ispaye"].apply(to_bool)
+                    else:
+                        df_all["ispaye_bool"] = False
+
+                    df_mois = df_all[df_all["Mois"] == mois_choisi]
                     if not df_mois.empty:
                         salaire_net = float(df_mois["Salaire net"].iloc[0])
-                        travel_expense = float(df_mois["Travel Expense"].iloc[0])
-                        travel_allowance = float(df_mois["Travel Allowance"].iloc[0])
-                        total_mois = float(df_mois["Total"].iloc[0])
-
-                        trimestre = {
-                            "-mars-": ["-janv.-", "-févr.-", "-mars-"],
-                            "-juin-": ["-avr.-", "-mai-", "-juin-"],
-                            "-sept.-": ["-juil.-", "-août-", "-sept.-"],
-                            "-déc.-": ["-oct.-", "-nov.-", "-déc.-"]
-                        }
-
-                        cumul_indemnites = 0
-                        salaire_affiche = salaire_net
+                        travel_expense = float(df_mois["Travel Expense"].iloc[0]) if "Travel Expense" in df_mois.columns else 0.0
+                        travel_allowance = float(df_mois["Allowance"].iloc[0]) if "Allowance" in df_mois.columns else 0.0
+                        is_paye = bool(df_mois["ispaye_bool"].iloc[0])
 
                         st.success(f"Bienvenue {df_mois['Name'].iloc[0]} 👋")
                         st.write("### 📊 Vos informations de paie")
 
-                        st.markdown(f"- **💰 Salaire Net (versé ce mois) :** {salaire_net:,.2f} DZD")
+                        if not is_paye:
+                            # 🚫 Seulement le salaire net
+                            st.markdown(f"- **💰 Salaire Net (versé ce mois) :** {salaire_net:,.2f} DZD")
+                            st.info("ℹ️ Ce mois, vous êtes payé uniquement avec le **salaire net**.")
+                        else:
+                            # ✅ Salaire net + allowance du mois courant + précédent (si présent)
+                            try:
+                                pos = ordre_mois.index(mois_choisi)
+                            except ValueError:
+                                pos = None
 
-                        st.markdown(f"""
-                        - **🧾 Travel Expense :** {travel_expense:,.2f} DZD  
-                        - **🚌 Travel Allowance :** {travel_allowance:,.2f} DZD  
-                        - **📦 Total Indemnités du mois :** {total_mois:,.2f} DZD  
-                        """)
+                            cumul_allowance = travel_allowance 
+                            # cumul_allowance = cumul_allowance - (cumul_allowance*0.10)
 
-                        if mois_choisi in trimestre:
-                            df_trim = df_all[df_all["Mois"].isin(trimestre[mois_choisi])]
-                            cumul_indemnites = df_trim["Total"].sum()
-                            salaire_affiche = salaire_net + cumul_indemnites
+                            if pos is not None and pos > 0:
+                                mois_prec = ordre_mois[pos - 1]
+                                prev_rows = df_all[df_all["Mois"] == mois_prec]
+                                if not prev_rows.empty and "Allowance" in prev_rows.columns:
+                                    # si plusieurs lignes (rare), on prend la somme pour ce matricule/mois
+                                    prev_allow = float(prev_rows["Allowance"].sum())
+                                    cumul_allowance += prev_allow
+                                    cumul_allowancesansirg = cumul_allowance - (cumul_allowance*0.10)
+
+                            salaire_affiche = salaire_net + cumul_allowancesansirg
 
                             st.markdown(f"""
+                            - **💰 Salaire Net :** {salaire_net:,.2f} DZD  
+                            - **🚌 Allowance (mois courant + précédent) :** {cumul_allowance:,.2f} DZD  
                             ---
-                            - **➕ Cumul indemnités du trimestre :** {cumul_indemnites:,.2f} DZD  
                             - **🔢 Salaire final versé :** {salaire_affiche:,.2f} DZD  
                             """)
-                        else:
-                            st.info("ℹ️ Ce mois, vous êtes payé uniquement avec le **salaire net**. Les indemnités seront versées à la fin du trimestre.")
+
+                        
 
     # --- BOUTON DECONNEXION ---
     if st.button("🚪 Se déconnecter"):
