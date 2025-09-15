@@ -17,13 +17,13 @@ st.set_page_config(
     layout="wide"
 )
 import base64
-service_account_info = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+service_account_info = st.secrets["GOOGLE_CREDENTIALS"]
 
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
 creds = service_account.Credentials.from_service_account_info(service_account_info)
-
 service = build('drive', 'v3', credentials=creds)
+
 
 # --- Exemple : récupérer les fichiers d'un dossier ---
 def list_files_in_folder(folder_id):
@@ -544,5 +544,6 @@ if st.session_state.logged_in:
         st.session_state.show_change_form = False
         st.session_state.show_paie = False
         st.rerun()
+
 
 
