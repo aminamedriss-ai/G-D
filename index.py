@@ -17,7 +17,7 @@ st.set_page_config(
     layout="wide"
 )
 import base64
-service_account_info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
+service_account_info = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
 
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
@@ -544,4 +544,5 @@ if st.session_state.logged_in:
         st.session_state.show_change_form = False
         st.session_state.show_paie = False
         st.rerun()
+
 
