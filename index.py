@@ -3,14 +3,43 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 import base64
 from supabase import create_client
-
+from pydrive2.auth import GoogleAuth
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+import io
+import streamlit as st
+from googleapiclient.http import MediaIoBaseDownload
 st.set_page_config(
     page_title=" Portail Paie Employé G + D",
     page_icon="g+d2.png",  # chemin local ou URL
     layout="wide"
 )
 import base64
+service_account_info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
 
+SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+
+creds = service_account.Credentials.from_service_account_info(service_account_info)
+
+service = build('drive', 'v3', credentials=creds)
+
+# --- Exemple : récupérer les fichiers d'un dossier ---
+def list_files_in_folder(folder_id):
+    results = service.files().list(
+        q=f"'{folder_id}' in parents and mimeType='application/pdf'",
+        fields="files(id, name)"
+    ).execute()
+    return results.get('files', [])
+
+# --- Exemple : télécharger un fichier ---
+def download_file(file_id, filename):
+    request = service.files().get_media(fileId=file_id)
+    fh = io.BytesIO()
+    downloader = MediaIoBaseDownload(fh, request)
+    done = False
+    while not done:
+        status, done = downloader.next_chunk()
+    return fh.getvalue()
 
 # Fonction pour convertir une image locale en base64
 def get_base64_of_image(img_path):
@@ -207,6 +236,21 @@ header[data-testid="stHeader"] button[kind="header"] {
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+    <style>
+    .stDownloadButton button {
+        background: #ffffff !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    font-weight: 600 !important;
+    }
+    .stDownloadButton button:hover {
+        background: #003080 !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 def to_bool(x):
     if pd.isna(x):
@@ -246,7 +290,6 @@ with open("g+d.png", "rb") as image_file:
     encoded = base64.b64encode(image_file.read()).decode()
 
 st.title("💼 Portail Paie Employé G + D")
-
 
 # --- CONNEXION SUPABASE ---
 SUPABASE_URL = "https://ddvgplwwukhwdexhwaxc.supabase.co"
@@ -329,6 +372,8 @@ if st.session_state.logged_in:
 
     # --- INTERFACE CONSULTATION DE PAIE ---
     if st.session_state.show_paie:
+        
+
         st.subheader("📊 Consultation de paie")
         matricule = st.session_state.matricule
         ordre_mois = [
@@ -408,8 +453,86 @@ if st.session_state.logged_in:
                             ---
                             - **🔢 Salaire final versé :** {salaire_affiche:,.2f} DZD  
                             """)
+                           
 
+                            # --- ID dossier racine ---
+                        root_folder_id = "1rw2O-4Ppi5wva-SbQm0AaBALL-lzzLV_"
+
+                            # Trouver le dossier du mois choisi
+                        # results = service.files().list(
+                        # q=f"'{root_folder_id}' in parents and mimeType='application/vnd.google-apps.folder'",
+                        #     fields="files(id, name)"
+                        # ).execute()
+                        results = service.files().list(
+                            q=f"'{root_folder_id}' in parents",
+                            fields="files(id, name, mimeType)"
+                        ).execute()
+
+                        # st.write("📂 Contenu trouvé :", results.get("files", []))
+
+                        MOIS_MAP = {
+                        "-janv.-": "Janvier",
+                        "-févr.-": "Février",
+                        "-mars-": "Mars",
+                        "-avr.-": "Avril",
+                        "-mai-": "Mai",
+                        "-juin-": "Juin",
+                        "-juil.-": "Juillet",
+                        "-août-": "Août",
+                        "-sept.-": "Septembre",
+                        "-oct.-": "Octobre",
+                        "-nov.-": "Novembre",
+                        "-déc.-": "Décembre",
+                        }
+
+                        mois_clean = MOIS_MAP.get(mois_choisi, mois_choisi).lower()
                         
+                        mois_folder_id = None
+                        for f in results.get('files', []):
+                            nom_dossier = f['name'].lower()
+                            if mois_clean in nom_dossier:
+                                mois_folder_id = f['id']
+                                break
+
+
+                        if mois_folder_id:
+    
+                            ovs_results = service.files().list(
+                                q=f"'{mois_folder_id}' in parents and mimeType='application/vnd.google-apps.folder'",
+                                fields="files(id, name)"
+                            ).execute()
+
+                            ovs_id = None
+                            for ovs in ovs_results.get('files', []):
+                                if "OVs" in ovs['name']:
+                                    ovs_id = ovs['id']
+                                    break
+
+                            if ovs_id:
+                                pdfs = list_files_in_folder(ovs_id)
+
+                                nom_prenom = str(df_mois['Name'].iloc[0]).lower()
+
+                                found = False
+                                for pdf in pdfs:
+                                    if nom_prenom in pdf['name'].lower():
+                                        content = download_file(pdf['id'], pdf['name'])
+                                        st.download_button(
+                                            label=f"📥 Télécharger {pdf['name']}",
+                                            data=content,
+                                            file_name=pdf['name'],
+                                            mime="application/pdf"
+                                        )
+                                        found = True
+
+                                if not found:
+                                    st.warning(f"Aucun PDF trouvé pour {nom_prenom} dans {mois_choisi}.")
+                            else:
+                                st.error(f"Aucun dossier OVs trouvé dans {mois_choisi}.")
+                        else:
+                            st.error(f"Dossier pour {mois_choisi} introuvable dans G+D.")
+
+                
 
     # --- BOUTON DECONNEXION ---
     if st.button("🚪 Se déconnecter"):
