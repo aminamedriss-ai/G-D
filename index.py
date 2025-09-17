@@ -520,15 +520,13 @@ if st.session_state.logged_in:
                             if ovs_id:
                                 pdfs = list_files_in_folder(ovs_id)
 
-                                nom_prenom = normalize_txt(str(df_mois['Name'].iloc[0]))
-                                st.write("🔎 Nom recherché :", nom_prenom)
-                                for pdf in pdfs:
-                                    st.write("👉 Comparaison :", pdf['name'].lower())
-
+                                nom_prenom = str(df_mois['Name'].iloc[0]).lower().strip()
+                                # On garde seulement le premier mot (nom de famille)
+                                nom_clef = nom_prenom.split()[0]  
+                                
                                 found = False
                                 for pdf in pdfs:
-                                    pdf_name_norm = normalize_txt(pdf['name'])
-                                    if nom_prenom in pdf_name_norm:
+                                    if nom_clef in pdf['name'].lower():
                                         content = download_file(pdf['id'], pdf['name'])
                                         st.download_button(
                                             label=f"📥 Télécharger {pdf['name']}",
@@ -556,6 +554,7 @@ if st.session_state.logged_in:
         st.session_state.show_change_form = False
         st.session_state.show_paie = False
         st.rerun()
+
 
 
 
