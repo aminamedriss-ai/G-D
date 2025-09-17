@@ -30,25 +30,21 @@ if uploaded_file:
     st.write("✅ Aperçu du fichier importé :")
     st.dataframe(df.head())
 
+    # Harmoniser les noms de colonnes
+    df.rename(columns={"N°": "Matricule"}, inplace=True)
+    
+    st.write("✅ Aperçu du fichier importé :")
+    st.dataframe(df.head())
+    
     # Vérifier colonnes nécessaires
-    if "N°" in df.columns:
-    col_matricule = "N°"
-elif "Matricule" in df.columns:
-    col_matricule = "Matricule"
-else:
-    st.error("❌ Le fichier doit contenir une colonne 'N°' ou 'Matricule'")
-    st.stop()
-
-# Vérifier colonnes nécessaires
-    colonnes_requises = [col_matricule, "Mois", "Prime exeptionnelle (10%) (DZD)"]
+    colonnes_requises = ["Matricule", "Mois", "Prime exeptionnelle (10%) (DZD)"]
     if not all(col in df.columns for col in colonnes_requises):
         st.error(f"❌ Le fichier doit contenir les colonnes : {colonnes_requises}")
         st.stop()
     
     if st.button("🚀 Mettre à jour Supabase"):
         for _, row in df.iterrows():
-            # ⚡ Utiliser col_matricule dynamique
-            matricule = str(row[col_matricule]).strip()
+            matricule = str(row["Matricule"]).strip()   # 🔑 toujours "Matricule"
             mois = str(row["Mois"]).strip()
             allowance = float(row["Prime exeptionnelle (10%) (DZD)"] or 0)
     
@@ -57,7 +53,6 @@ else:
                 "ispaye": True
             }
     
-            # Mise à jour Supabase
             supabase.table("Paie") \
                 .update(data) \
                 .eq("matricule", matricule) \
@@ -67,6 +62,3 @@ else:
             print(f"✅ Mise à jour : {matricule} - {mois} → {allowance} DZD")
     
         st.success("🎉 Toutes les lignes ont été mises à jour dans Supabase.")
-
-
-
