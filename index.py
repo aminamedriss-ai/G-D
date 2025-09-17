@@ -49,13 +49,7 @@ def get_base64_of_image(img_path):
     with open(img_path, "rb") as f:
         data = f.read()
     return base64.b64encode(data).decode()
-def normalize_txt(txt):
-    txt = txt.lower().strip()
-    txt = "".join(
-        c for c in unicodedata.normalize("NFD", txt)
-        if unicodedata.category(c) != "Mn"  # supprime les accents
-    )
-    return txt
+
 # Convertir tes logos locaux
 logo_gauche = get_base64_of_image("g+d.png")
 logo_droite = get_base64_of_image("logo3.jpg")
@@ -554,6 +548,7 @@ if st.session_state.logged_in:
         st.session_state.show_change_form = False
         st.session_state.show_paie = False
         st.rerun()
+
 
 
 
