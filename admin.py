@@ -47,8 +47,8 @@ else:
     
     if st.button("🚀 Mettre à jour Supabase"):
         for _, row in df.iterrows():
-            # ⚡ on mappe "N°" du CSV vers "matricule" de Supabase
-            matricule = str(row["N°"]).strip()
+            # ⚡ Utiliser col_matricule dynamique
+            matricule = str(row[col_matricule]).strip()
             mois = str(row["Mois"]).strip()
             allowance = float(row["Prime exeptionnelle (10%) (DZD)"] or 0)
     
@@ -57,7 +57,7 @@ else:
                 "ispaye": True
             }
     
-            # Mise à jour Supabase en fonction du matricule et mois
+            # Mise à jour Supabase
             supabase.table("Paie") \
                 .update(data) \
                 .eq("matricule", matricule) \
@@ -65,8 +65,8 @@ else:
                 .execute()
     
             print(f"✅ Mise à jour : {matricule} - {mois} → {allowance} DZD")
+    
+        st.success("🎉 Toutes les lignes ont été mises à jour dans Supabase.")
 
-
-            st.success("🎉 Toutes les lignes ont été mises à jour dans Supabase.")
 
 
