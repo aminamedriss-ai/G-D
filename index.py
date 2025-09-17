@@ -11,6 +11,7 @@ import streamlit as st
 from googleapiclient.http import MediaIoBaseDownload
 import os
 import json
+import unicodedata
 st.set_page_config(
     page_title=" Portail Paie Employé G + D",
     page_icon="g+d2.png",  # chemin local ou URL
@@ -555,6 +556,7 @@ if st.session_state.logged_in:
         st.session_state.show_change_form = False
         st.session_state.show_paie = False
         st.rerun()
+
 
 
 
