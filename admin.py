@@ -37,13 +37,13 @@ if uploaded_file:
     else:
         if st.button("🚀 Mettre à jour Supabase"):
             for _, row in df.iterrows():
-                matricule = str(row["Matricule"]).strip()
+                matricule = str(row["N°"]).strip()   # ⚡ on mappe N° → matricule
                 mois = str(row["Mois"]).strip()
                 allowance = float(row["Prime exeptionnelle (10%) (DZD)"] or 0)
 
                 data = {
                     "Allowance": allowance,
-                    "ispaye": True  # on considère payé dès import
+                    "ispaye": True
                 }
 
                 # Update ligne correspondante
@@ -53,8 +53,7 @@ if uploaded_file:
                     .eq("Mois", mois) \
                     .execute()
 
-                # Feedback console
-                print(f"✅ Mise à jour : {matricule} - {mois} → {allowance} DZD")
+                # Debug console
+                print(f"✅ Mise à jour : {matricule} - {mois} → {allowance} DZD | Response: {response}")
 
             st.success("🎉 Toutes les lignes ont été mises à jour dans Supabase.")
-
