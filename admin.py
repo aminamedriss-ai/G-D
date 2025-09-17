@@ -31,20 +31,20 @@ if uploaded_file:
     st.dataframe(df.head())
 
     # Harmoniser les noms de colonnes
-    df.rename(columns={"N°": "Matricule"}, inplace=True)
+    df.rename(columns={"N°": "matricule"}, inplace=True)
     
     st.write("✅ Aperçu du fichier importé :")
     st.dataframe(df.head())
     
     # Vérifier colonnes nécessaires
-    colonnes_requises = ["Matricule", "Mois", "Prime exeptionnelle (10%) (DZD)"]
+    colonnes_requises = ["matricule", "Mois", "Prime exeptionnelle (10%) (DZD)"]
     if not all(col in df.columns for col in colonnes_requises):
         st.error(f"❌ Le fichier doit contenir les colonnes : {colonnes_requises}")
         st.stop()
     
     if st.button("🚀 Mettre à jour Supabase"):
         for _, row in df.iterrows():
-            matricule = str(row["Matricule"]).strip()   # 🔑 toujours "Matricule"
+            matricule = str(row["matricule"]).strip()   # 🔑 toujours "Matricule"
             mois = str(row["Mois"]).strip()
             allowance = float(row["Prime exeptionnelle (10%) (DZD)"] or 0)
     
@@ -62,3 +62,4 @@ if uploaded_file:
             print(f"✅ Mise à jour : {matricule} - {mois} → {allowance} DZD")
     
         st.success("🎉 Toutes les lignes ont été mises à jour dans Supabase.")
+
