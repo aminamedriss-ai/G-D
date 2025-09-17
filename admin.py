@@ -14,98 +14,46 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 st.title("⚙️ Interface Admin - Gestion des Paies")
 
-# 📌 Onglets
-# menu = st.sidebar.radio("Menu", ["💰 Paies"])
-
-# ========================
-# 👤 Gestion des employés
-# ========================
-# if menu == "👤 Employés":
-    # st.header("👤 Gestion des employés")
-
-    # # Formulaire ajout employé
-    # with st.form("ajout_employe"):
-    #     matricule = st.text_input("Matricule")
-    #     nom = st.text_input("Nom & Prénom")
-    #     poste = st.text_input("Titre du poste")
-    #     indemnite = st.text_input("Indémnité de panier")
-    #     salaire_base = st.text_input("Salaire de base")
-    #     salaire_net = st.text_input("Salaire net")
-
-    #     submitted = st.form_submit_button("➕ Ajouter")
-    #     # Récupérer le dernier id
-    #     res = supabase.table("Paie").select("id").order("id", desc=True).limit(1).execute()
-    #     if res.data:
-    #         last_id = res.data[0]["id"]
-    #         new_id = last_id + 1
-    #     else:
-    #         new_id = 1  # si la table est vide
-
-    #     if submitted:
-    #         data = {
-    #             "id": new_id,
-    #             "matricule": matricule,
-    #             "Name": nom,
-    #             "Titre du poste": poste,
-    #         }
-    #         supabase.table("Paie").insert(data).execute()
-    #         st.success(f"✅ Employé {nom} ajouté.")
-
-    # # Liste employés existants
-    # res = supabase.table("Paie").select("*").execute()
-    # df_emp = pd.DataFrame(res.data)
-    # if not df_emp.empty:
-    #     st.subheader("📋 Liste des employés")
-    #     st.dataframe(df_emp)
-
-# ========================
-# 💰 Gestion des paies
-# ========================
-# if menu == "💰 Paies":
 st.header("💰 Gestion des paies")
 
     # Choisir employé
-res = supabase.table("Paie").select("matricule, Name").execute()
-df_emp = pd.DataFrame(res.data)
+# Upload du fichier CSV
+uploaded_file = st.file_uploader("📂 Charger un fichier CSV", type=["csv"])
 
-    # ✅ Garder les matricules uniques (1 ligne par matricule)
-df_unique = df_emp.drop_duplicates(subset="matricule")
+if uploaded_file:
+    # Charger CSV
+    df = pd.read_csv(uploaded_file , skiprows=2,
+                sep=",",
+                decimal=",",
+                thousands=" ")
 
-    # Construire dictionnaire pour le selectbox
-employe_dict = {f"{row['Name']} ({row['matricule']})": row["matricule"] for _, row in df_unique.iterrows()}
+    st.write("✅ Aperçu du fichier importé :")
+    st.dataframe(df.head())
 
-# Sélecteur
-choix_emp = st.selectbox("👤 Sélectionnez un employé", list(employe_dict.keys()))
+    # Vérifier colonnes nécessaires
+    colonnes_requises = ["Matricule", "Mois", "Prime exeptionnelle (10%) (DZD)"]
+    if not all(col in df.columns for col in colonnes_requises):
+        st.error(f"❌ Le fichier doit contenir les colonnes : {colonnes_requises}")
+    else:
+        if st.button("🚀 Mettre à jour Supabase"):
+            for _, row in df.iterrows():
+                matricule = str(row["Matricule"]).strip()
+                mois = str(row["Mois"]).strip()
+                allowance = float(row["Prime exeptionnelle (10%) (DZD)"] or 0)
 
-if choix_emp:
-        matricule = employe_dict[choix_emp]
-
-        with st.form("ajout_paie"):
-            mois = st.selectbox("📅 Mois", ["-janv.-", "-févr.-", "-mars-", "-avr.-", "-mai-", "-juin-", "-juil.-", "-août-", "-sept.-", "-oct.-", "-nov.-", "-déc.-"])
-            
-            allowance = st.number_input("🚌 Allowance", min_value=0.0, step=100.0)
-            ispaye = st.checkbox("✅ Allownance attribué ?")
-
-            
-            submit_paie = st.form_submit_button("➕ Ajouter / Modifier paie")
-            if submit_paie:
                 data = {
                     "Allowance": allowance,
-                    "ispaye": ispaye
+                    "ispaye": True  # on considère payé dès import
                 }
 
-                supabase.table("Paie") \
+                # Update ligne correspondante
+                response = supabase.table("Paie") \
                     .update(data) \
                     .eq("matricule", matricule) \
                     .eq("Mois", mois) \
                     .execute()
 
-                st.success(f"✅ Paie modifiée pour {choix_emp} ({mois})")
+                # Feedback console
+                print(f"✅ Mise à jour : {matricule} - {mois} → {allowance} DZD")
 
-
-        # 📊 Historique paie
-        # res_paie = supabase.table("Paie").select("*").eq("matricule", matricule).execute()
-        # df_paie = pd.DataFrame(res_paie.data)
-        # if not df_paie.empty:
-        #     st.subheader("📋 Historique des paies")
-        #     st.dataframe(df_paie)
+            st.success("🎉 Toutes les lignes ont été mises à jour dans Supabase.")
