@@ -31,29 +31,39 @@ if uploaded_file:
     st.dataframe(df.head())
 
     # Vérifier colonnes nécessaires
-    colonnes_requises = ["N°", "Mois", "Prime exeptionnelle (10%) (DZD)"]
+    if "N°" in df.columns:
+    col_matricule = "N°"
+elif "Matricule" in df.columns:
+    col_matricule = "Matricule"
+else:
+    st.error("❌ Le fichier doit contenir une colonne 'N°' ou 'Matricule'")
+    st.stop()
+
+# Vérifier colonnes nécessaires
+    colonnes_requises = [col_matricule, "Mois", "Prime exeptionnelle (10%) (DZD)"]
     if not all(col in df.columns for col in colonnes_requises):
         st.error(f"❌ Le fichier doit contenir les colonnes : {colonnes_requises}")
-    else:
-        if st.button("🚀 Mettre à jour Supabase"):
-            for _, row in df.iterrows():
-                matricule = str(row["N°"]).strip()   # ⚡ on mappe N° → matricule
-                mois = str(row["Mois"]).strip()
-                allowance = float(row["Prime exeptionnelle (10%) (DZD)"] or 0)
-
-                data = {
-                    "Allowance": allowance,
-                    "ispaye": True
-                }
-
-                # Update ligne correspondante
-                response = supabase.table("Paie") \
-                    .update(data) \
-                    .eq("matricule", matricule) \
-                    .eq("Mois", mois) \
-                    .execute()
-
-                # Debug console
-                print(f"✅ Mise à jour : {matricule} - {mois} → {allowance} DZD | Response: {response}")
+        st.stop()
+    
+    if st.button("🚀 Mettre à jour Supabase"):
+        for _, row in df.iterrows():
+            matricule = str(row[col_matricule]).strip()  # <-- utilise le bon nom
+            mois = str(row["Mois"]).strip()
+            allowance = float(row["Prime exeptionnelle (10%) (DZD)"] or 0)
+    
+            data = {
+                "Allowance": allowance,
+                "ispaye": True
+            }
+    
+            # Update ligne correspondante
+            response = supabase.table("Paie") \
+                .update(data) \
+                .eq("matricule", matricule) \
+                .eq("Mois", mois) \
+                .execute()
+    
+            print(f"✅ Mise à jour : {matricule} - {mois} → {allowance} DZD")
 
             st.success("🎉 Toutes les lignes ont été mises à jour dans Supabase.")
+
