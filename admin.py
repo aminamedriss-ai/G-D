@@ -31,7 +31,7 @@ if uploaded_file:
     st.dataframe(df.head())
 
     # Vérifier colonnes nécessaires
-    colonnes_requises = ["Matricule", "Mois", "Prime exeptionnelle (10%) (DZD)"]
+    colonnes_requises = ["N°", "Mois", "Prime exeptionnelle (10%) (DZD)"]
     if not all(col in df.columns for col in colonnes_requises):
         st.error(f"❌ Le fichier doit contenir les colonnes : {colonnes_requises}")
     else:
@@ -57,3 +57,4 @@ if uploaded_file:
                 print(f"✅ Mise à jour : {matricule} - {mois} → {allowance} DZD")
 
             st.success("🎉 Toutes les lignes ont été mises à jour dans Supabase.")
+
