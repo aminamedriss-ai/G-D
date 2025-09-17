@@ -48,7 +48,13 @@ def get_base64_of_image(img_path):
     with open(img_path, "rb") as f:
         data = f.read()
     return base64.b64encode(data).decode()
-
+def normalize_txt(txt):
+    txt = txt.lower().strip()
+    txt = "".join(
+        c for c in unicodedata.normalize("NFD", txt)
+        if unicodedata.category(c) != "Mn"  # supprime les accents
+    )
+    return txt
 # Convertir tes logos locaux
 logo_gauche = get_base64_of_image("g+d.png")
 logo_droite = get_base64_of_image("logo3.jpg")
@@ -513,11 +519,15 @@ if st.session_state.logged_in:
                             if ovs_id:
                                 pdfs = list_files_in_folder(ovs_id)
 
-                                nom_prenom = str(df_mois['Name'].iloc[0]).lower()
+                                nom_prenom = normalize_txt(str(df_mois['Name'].iloc[0]))
+                                st.write("🔎 Nom recherché :", nom_prenom)
+                                for pdf in pdfs:
+                                    st.write("👉 Comparaison :", pdf['name'].lower())
 
                                 found = False
                                 for pdf in pdfs:
-                                    if nom_prenom in pdf['name'].lower():
+                                    pdf_name_norm = normalize_txt(pdf['name'])
+                                    if nom_prenom in pdf_name_norm:
                                         content = download_file(pdf['id'], pdf['name'])
                                         st.download_button(
                                             label=f"📥 Télécharger {pdf['name']}",
@@ -526,6 +536,7 @@ if st.session_state.logged_in:
                                             mime="application/pdf"
                                         )
                                         found = True
+                                        break
 
                                 if not found:
                                     st.warning(f"Aucun PDF trouvé pour {nom_prenom} dans {mois_choisi}.")
@@ -544,6 +555,7 @@ if st.session_state.logged_in:
         st.session_state.show_change_form = False
         st.session_state.show_paie = False
         st.rerun()
+
 
 
 
